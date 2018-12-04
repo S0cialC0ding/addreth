@@ -3,8 +3,10 @@ import styled from 'styled-components'
 import Emojify from 'react-emojione'
 import axios from 'axios'
 import { FaBolt } from 'react-icons/fa'
+import { Router } from '../routes'
 
 import { Web3Store } from '../stores/web3'
+import MakerUsdPrice from './MakerDaoUsd'
 
 const LeaderboardContainer = styled.div`
   display: grid;
@@ -61,7 +63,7 @@ const AmountDonated = props => {
   return (
     <Total>
       Total amount collected
-      <Amount>{props.amount} ETH</Amount>
+      <Amount>{props.amount} ETH <MakerUsdPrice amount={props.amount} /></Amount>
     </Total>
   )
 }
@@ -73,13 +75,8 @@ export default class Leaderboard extends PureComponent {
   }
 
   fetchTxs = async address => {
-    const bs = `https://ipfs.web3.party:5001/corsproxy?module=account&action=txlist&address=${address}`
-    const json = await axios.get(bs, {
-      headers: {
-        Authorization: '',
-        'Target-URL': 'https://blockscout.com/eth/ropsten/api',
-      },
-    })
+    const bs = `https://api.etherscan.io/api?module=account&action=txlist&address=${address}`
+    const json = await axios.get(bs)
     return this.processTxList(json.data.result)
   }
 
@@ -99,7 +96,7 @@ export default class Leaderboard extends PureComponent {
           // tx was not successful - skip it.
           return acc
         }
-        if (cur.from == this.props.address) {
+        if (cur.from === this.props.address) {
           // tx was outgoing - don't add it in
           return acc
         }
@@ -152,7 +149,17 @@ export default class Leaderboard extends PureComponent {
       const TxsList = this.state.txs.map(tx => (
         <React.Fragment key={tx.from}>
           <LeaderboardSpannet>{tx.rank}</LeaderboardSpannet>
-          <LeaderboardSpannet>{tx.from}</LeaderboardSpannet>
+          <LeaderboardSpannet>
+            <TxLink
+              key={tx.from}
+              href={`/address/${tx.from}`}
+              onClick={() => {
+                Router.push(`/address/${tx.from}`)
+              }}
+            >
+              {tx.from}
+            </TxLink>
+          </LeaderboardSpannet>
           <LeaderboardSpannet>{tx.value} ETH</LeaderboardSpannet>
           <LeaderboardSpannet>
             <Emojify>{tx.input}</Emojify>
@@ -161,10 +168,9 @@ export default class Leaderboard extends PureComponent {
             {tx.hash.map((hash, index) => (
               <TxLink
                 key={hash}
-                href={`https://blockscout.com/eth/ropsten/tx/${hash}`}
+                href={`https://etherscan.io/tx/${hash}`}
                 target="_blank"
               >
-                {/* [{index + 1}] */}
                 <FaBolt />
               </TxLink>
             ))}
